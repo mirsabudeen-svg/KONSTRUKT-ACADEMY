@@ -8,12 +8,15 @@ Premium dark-mode LMS for students ages 9–16. Built with Next.js App Router, T
 - Clerk auth with protected routes
 - Spaceship dashboard shell with sidebar
 
-## Phase 2 (current)
+## Phase 2 ✓
 
-- Supabase schema (`users`, `modules`, `progress`, `print_queue`) + RLS
-- Clerk JWT → Supabase (`supabase` template) + webhook user sync
-- 10-module mission track with strict unlock (N+1 after N completed)
-- Live AI token count from `users.tokens_remaining`
+- Supabase schema + RLS, mission track, strict unlock logic
+
+## Phase 3 (current)
+
+- AI Terminal split UI (chat + WHAT/STYLE/DETAILS prompt assistant)
+- Vercel AI SDK + Claude (`/api/chat`) with Kontraktor system prompt (Brownout Rule)
+- Token check + deduct 1 per generation via Supabase
 
 ## Quick start
 
@@ -39,7 +42,7 @@ Open [http://localhost:3000](http://localhost:3000).
 |-------|--------|
 | 1 | Scaffolding, Clerk, sidebar ✓ |
 | 2 | Supabase, mission track, lock/unlock ✓ |
-| 3 | AI Terminal (Vercel AI SDK + Claude), token deduction |
+| 3 | AI Terminal, Claude, token deduction ✓ |
 | 4 | Admin print queue Kanban, trainer token refills |
 
 ## Project rules
