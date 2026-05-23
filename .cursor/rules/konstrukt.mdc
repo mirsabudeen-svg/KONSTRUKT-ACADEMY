@@ -1,0 +1,15 @@
+---
+description: KONSTRUKT Robotics Academy — stack, schema, business rules, and phase roadmap
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# KONSTRUKT Robotics Academy
+
+- **UI**: Dark "spaceship dashboard", child-friendly, professional. Tailwind + shadcn + Framer Motion / GSAP for celebrations.
+- **Auth**: Clerk → Supabase via JWT template `supabase`. `auth()` + `getToken({ template: 'supabase' })` for RLS.
+- **Progress**: Module N unlocked only when N-1 is `completed`. No skipping.
+- **Hardware AI code**: ESP32-S3, PCA9685, MG996R — **sequential servo motion only** (brownout rule).
+- **Tokens**: Each AI generation costs 1; block UI at `tokens_remaining <= 0`.
+- **Phases**: 1 Auth ✓ → 2 Supabase/missions ✓ → 3 AI Terminal → 4 Admin/print queue.
