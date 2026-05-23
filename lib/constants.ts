@@ -34,12 +34,15 @@ export const MAIN_NAV: NavItem[] = [
   },
 ];
 
-export const ADMIN_NAV: NavItem = {
+export const TRAINER_NAV: NavItem = {
   title: "Trainer Ops",
-  href: "/admin",
+  href: "/trainer/dashboard",
   icon: Shield,
   description: "Print queue & token refills",
 };
+
+/** @deprecated Use TRAINER_NAV */
+export const ADMIN_NAV = TRAINER_NAV;
 
 export const APP_NAME = "KONSTRUKT";
 export const APP_TAGLINE = "Robotics Academy";

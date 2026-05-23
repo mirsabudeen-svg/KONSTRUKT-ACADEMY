@@ -28,12 +28,26 @@ const statusConfig = {
     iconClass: "text-cyan-400",
     label: "Ready",
   },
+  ready: {
+    ring: "border-cyan-500/50",
+    bg: "bg-cyan-500/10",
+    icon: Sparkles,
+    iconClass: "text-cyan-400",
+    label: "Ready",
+  },
   in_progress: {
     ring: "border-cyan-400 ring-2 ring-cyan-500/40",
     bg: "bg-cyan-500/15",
     icon: Play,
     iconClass: "text-cyan-300",
     label: "In Progress",
+  },
+  pending_review: {
+    ring: "border-amber-500/40",
+    bg: "bg-amber-500/10",
+    icon: Play,
+    iconClass: "text-amber-300",
+    label: "Pending Review",
   },
   completed: {
     ring: "border-emerald-500/40",
@@ -188,7 +202,7 @@ function MissionNode({
         <p className="mt-2 text-xs text-violet-300/80">
           Badge: {mission.badge_name}
         </p>
-        {mission.progress && mission.progress.score > 0 && (
+        {mission.progress?.score != null && mission.progress.score > 0 && (
           <p className="mt-1 font-mono text-xs text-muted-foreground">
             Score: {mission.progress.score}%
           </p>

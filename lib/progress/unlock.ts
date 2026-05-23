@@ -27,7 +27,9 @@ export function resolveDisplayStatus(
 ): ModuleDisplayStatus {
   if (!unlocked) return "locked";
   if (stored === "completed") return "completed";
+  if (stored === "pending_review") return "pending_review";
   if (stored === "in_progress") return "in_progress";
+  if (stored === "ready") return "ready";
   return "available";
 }
 
@@ -64,7 +66,10 @@ export function getMissionSummary(missions: MissionModule[]) {
     missions.find(
       (m) =>
         m.unlocked &&
-        (m.displayStatus === "in_progress" || m.displayStatus === "available")
+        (m.displayStatus === "in_progress" ||
+          m.displayStatus === "available" ||
+          m.displayStatus === "ready" ||
+          m.displayStatus === "pending_review")
     ) ?? null;
 
   return {

@@ -12,4 +12,4 @@ alwaysApply: true
 - **Progress**: Module N unlocked only when N-1 is `completed`. No skipping.
 - **Hardware AI code**: ESP32-S3, PCA9685, MG996R — **sequential servo motion only** (brownout rule).
 - **Tokens**: Each AI generation costs 1; block UI at `tokens_remaining <= 0`.
-- **Phases**: 1 Auth ✓ → 2 Supabase/missions ✓ → 3 AI Terminal → 4 Admin/print queue.
+- **Phases**: 1 Auth ✓ → 2 Supabase/missions ✓ → 3 AI Terminal ✓ → 4 Admin/print queue.

@@ -1,5 +1,5 @@
--- KONSTRUKT Robotics Academy — core schema + RLS
--- Run in Supabase SQL Editor (or via CLI). Requires Clerk JWT with `sub` = user id.
+-- DEPRECATED: Superseded by 002_foundation_prd_schema.sql
+-- Do not run on new projects. Kept for history only.
 
 -- ---------------------------------------------------------------------------
 -- Tables

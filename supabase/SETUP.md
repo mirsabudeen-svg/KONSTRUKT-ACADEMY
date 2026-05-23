@@ -1,4 +1,4 @@
-# Supabase setup (Phase 2)
+# Supabase setup
 
 ## 1. Create project
 
@@ -12,8 +12,11 @@ Create a project at [supabase.com](https://supabase.com) and copy:
 
 In **SQL Editor**, run in order:
 
-1. `supabase/migrations/001_schema.sql`
-2. `supabase/seed.sql`
+1. **`supabase/migrations/002_foundation_prd_schema.sql`** — full PRD schema (ENUMs, cohorts, RLS)
+2. **`supabase/migrations/003_submission_code_stl.sql`** — `code` / `stl` submission types + storage bucket
+3. **`supabase/seed.sql`** — 10 mission modules
+
+> **Note:** `002` replaces the earlier `001_schema.sql`. Do not run both. `002` drops and recreates core tables (dev reset). Backup first if you have production data.
 
 ## 3. Clerk JWT template (required for RLS)
 
@@ -45,16 +48,22 @@ Events: `user.created`, `user.updated`, `user.deleted`
 
 Copy signing secret → `CLERK_WEBHOOK_SECRET` in `.env.local`
 
-> First dashboard visit also runs `ensureStudentProfile` if the webhook has not fired yet.
+## 5. Cohort setup (trainers)
 
-## 5. Third-party auth (optional)
+After migration, create cohorts via SQL or Phase 4 admin UI:
 
-Supabase Dashboard → **Authentication** → **Third-party** → enable **Clerk** and link your Clerk instance for native JWT verification.
+```sql
+INSERT INTO cohorts (name, start_date, trainer_id)
+VALUES ('Batch 01 - Kannur', '2026-06-01', 'clerk_trainer_user_id');
+
+UPDATE users SET cohort_id = '<cohort_uuid>' WHERE id = 'clerk_student_user_id';
+```
+
+Trainers only see students in cohorts where `cohorts.trainer_id` matches their Clerk id. Admins see all.
 
 ## 6. Verify
 
 1. Sign up a test student
-2. Open `/missions` — Mission 1 should be **In Progress**, 2–10 **Locked**
-3. In Supabase Table Editor, confirm `users` and `progress` rows exist
-
-To test unlock logic manually, set Mission 1 `progress.status` to `completed` in SQL — Mission 2 should show **Ready** on refresh.
+2. Assign to a cohort (optional for student self-view; required for trainer RLS)
+3. Open `/missions` — Mission 1 **in_progress**, others **locked**
+4. Confirm `users`, `progress`, `modules` rows in Table Editor
