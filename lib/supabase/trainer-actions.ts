@@ -12,6 +12,7 @@ import {
   createSupabaseServerClient,
   isSupabaseConfigured,
 } from "@/lib/supabase/server";
+import { logTokenRefill } from "@/lib/admin/token-log";
 import {
   TOKEN_REFILL_AMOUNT,
   type PrintQueueKanbanItem,
@@ -235,6 +236,12 @@ export async function refillStudentTokens(
       status: 500,
     };
   }
+
+  void logTokenRefill({
+    trainerId: ctx.userId,
+    studentId,
+    amount,
+  });
 
   return {
     ok: true,

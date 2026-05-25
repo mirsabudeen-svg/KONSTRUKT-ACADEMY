@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { auth } from "@clerk/nextjs/server";
 
 import type { MissionModule } from "@/lib/db/types";
@@ -15,7 +16,7 @@ export type MissionTrackData = {
   source: "supabase" | "fallback";
 };
 
-export async function getMissionTrack(): Promise<MissionTrackData> {
+export const getMissionTrack = cache(async (): Promise<MissionTrackData> => {
   const { userId } = await auth();
 
   if (!userId || !isSupabaseConfigured()) {
@@ -64,7 +65,7 @@ export async function getMissionTrack(): Promise<MissionTrackData> {
     summary: getMissionSummary(missions),
     source: "supabase",
   };
-}
+});
 
 export async function getMissionById(
   moduleId: number

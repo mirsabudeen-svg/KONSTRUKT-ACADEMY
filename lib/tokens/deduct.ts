@@ -1,3 +1,5 @@
+import type { TokenUsageType } from "@/lib/admin/token-log";
+import { logTokenUsage } from "@/lib/admin/token-log";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 
@@ -12,7 +14,9 @@ export type TokenDeductionResult =
  */
 export async function deductAiToken(
   userId: string,
-  retry = true
+  retry = true,
+  usageType: TokenUsageType = "ai_terminal",
+  moduleId?: number | null
 ): Promise<TokenDeductionResult> {
   if (!isSupabaseConfigured()) {
     return { ok: false, remaining: 0, reason: "unconfigured" };
@@ -45,9 +49,15 @@ export async function deductAiToken(
     .maybeSingle();
 
   if (updateError || !updated) {
-    if (retry) return deductAiToken(userId, false);
+    if (retry) return deductAiToken(userId, false, usageType, moduleId);
     return { ok: false, remaining: user.tokens_remaining, reason: "depleted" };
   }
+
+  void logTokenUsage({
+    studentId: userId,
+    usageType,
+    moduleId,
+  });
 
   return { ok: true, remaining: updated.tokens_remaining };
 }

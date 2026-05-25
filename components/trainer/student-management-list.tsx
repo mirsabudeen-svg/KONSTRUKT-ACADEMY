@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Sparkles, Users } from "lucide-react";
 
+import {
+  BulkActionsToolbar,
+  BulkSelectCheckbox,
+} from "@/components/trainer/bulk-actions";
 import { Button } from "@/components/ui/button";
 import type { TrainerStudentRow } from "@/lib/trainer/constants";
 import { TOKEN_REFILL_AMOUNT } from "@/lib/trainer/constants";
@@ -20,6 +24,16 @@ export function StudentManagementList({
   const [students, setStudents] = useState(initialStudents);
   const [refillingId, setRefillingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const toggleStudent = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
 
   const handleRefill = async (studentId: string) => {
     setRefillingId(studentId);
@@ -68,8 +82,30 @@ export function StudentManagementList({
     );
   }
 
+  const allSelected =
+    students.length > 0 && students.every((s) => selectedIds.has(s.id));
+
   return (
     <div className="space-y-4">
+      <BulkActionsToolbar
+        selectedIds={[...selectedIds]}
+        onClear={() => setSelectedIds(new Set())}
+        onComplete={() => router.refresh()}
+      />
+
+      <BulkSelectCheckbox
+        checked={allSelected}
+        indeterminate={selectedIds.size > 0 && !allSelected}
+        onChange={(checked) => {
+          if (checked) {
+            setSelectedIds(new Set(students.map((s) => s.id)));
+          } else {
+            setSelectedIds(new Set());
+          }
+        }}
+        label="Select all students"
+      />
+
       {message && (
         <p
           className={cn(
@@ -88,6 +124,7 @@ export function StudentManagementList({
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-violet-500/15 bg-violet-500/5">
+              <th className="w-10 px-4 py-3" />
               <th className="px-4 py-3 font-display text-xs uppercase tracking-wider text-violet-300">
                 Cadet
               </th>
@@ -108,6 +145,17 @@ export function StudentManagementList({
                 key={student.id}
                 className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
               >
+                <td className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(student.id)}
+                    onChange={(e) =>
+                      toggleStudent(student.id, e.target.checked)
+                    }
+                    className="size-4 rounded border-violet-500/40 accent-violet-500"
+                    aria-label={`Select ${student.displayName}`}
+                  />
+                </td>
                 <td className="px-4 py-3">
                   <p className="font-medium">{student.displayName}</p>
                   <p className="font-mono text-[10px] text-muted-foreground">

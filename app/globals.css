@@ -132,4 +132,33 @@
   .font-display {
     font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
   }
+
+  :focus-visible {
+    outline: 2px solid oklch(0.72 0.12 195);
+    outline-offset: 2px;
+  }
+
+  @keyframes astronaut-float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-12px);
+    }
+  }
+
+  .astronaut-float {
+    animation: astronaut-float 3s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }

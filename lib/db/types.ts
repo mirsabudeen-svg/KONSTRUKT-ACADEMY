@@ -15,6 +15,45 @@ export type PrintQueueStatus =
 
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 
+export type NotificationType =
+  | "approved"
+  | "rejected"
+  | "unlocked"
+  | "level_up"
+  | "streak_bonus"
+  | "proactive_hint"
+  | "trainer_message"
+  | "learning_alert";
+
+export type DbNotification = {
+  id: string;
+  student_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  module_id: number | null;
+  read: boolean;
+  created_at: string;
+};
+
+export type DbSubmission = {
+  id: string;
+  student_id: string;
+  module_id: number;
+  submission_type: SubmissionType;
+  content_url: string | null;
+  status: SubmissionStatus;
+  feedback: string | null;
+  trainer_feedback: string | null;
+  score: number | null;
+  submitted_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  ai_warning?: boolean;
+  trainer_notes?: string | null;
+  ai_pre_score?: number | null;
+};
+
 export type SubmissionType =
   | "quiz"
   | "prompt_text"
@@ -28,13 +67,21 @@ export type DbUser = {
   role: UserRole;
   cohort_id: string | null;
   tokens_remaining: number;
+  total_xp?: number;
+  level?: string;
+  current_streak?: number;
+  longest_streak?: number;
+  last_login_date?: string | null;
   created_at: string;
 };
+
+export type MissionLayer = "THINK" | "DESIGN" | "BUILD" | "OPERATE";
 
 export type DbModule = {
   id: number;
   title: string;
   description: string | null;
+  mission_layer: MissionLayer | null;
   badge_name: string;
   sort_order: number;
 };

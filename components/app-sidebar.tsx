@@ -5,16 +5,47 @@ import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 
 import { TokenBadgeClient } from "@/components/token-badge-client";
+import { XPBar } from "@/components/gamification/xp-bar";
+import { StreakBadge } from "@/components/gamification/streak-badge";
+import { ProgressSummary } from "@/components/progress/progress-summary";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ADMIN_NAV, APP_NAME, APP_TAGLINE, MAIN_NAV } from "@/lib/constants";
+import {
+  ADMIN_NAV,
+  APP_NAME,
+  APP_TAGLINE,
+  MAIN_NAV,
+  TRAINER_SUBMISSIONS_NAV,
+  TRAINER_CHALLENGES_NAV,
+} from "@/lib/constants";
+import type { StudentXPData } from "@/lib/gamification/types";
 import { cn } from "@/lib/utils";
+import type { MissionModule } from "@/lib/db/types";
 
-type AppSidebarProps = {
+type ProgressSummaryData = {
+  missions: MissionModule[];
+  completedCount: number;
+  totalScore: number;
   tokens: number;
 };
 
-export function AppSidebar({ tokens }: AppSidebarProps) {
+type AppSidebarProps = {
+  tokens: number;
+  isTrainer?: boolean;
+  pendingSubmissions?: number;
+  progressSummary?: ProgressSummaryData;
+  xpData?: StudentXPData | null;
+  streak?: number;
+};
+
+export function AppSidebar({
+  tokens,
+  isTrainer = false,
+  pendingSubmissions = 0,
+  progressSummary,
+  xpData,
+  streak = 0,
+}: AppSidebarProps) {
   const pathname = usePathname();
 
   const navLinkClass = (href: string, basePath?: boolean) => {
@@ -64,24 +95,83 @@ export function AppSidebar({ tokens }: AppSidebarProps) {
             );
           })}
 
-          <Separator className="my-3 bg-cyan-500/10" />
-
-          <Link
-            href={ADMIN_NAV.href}
-            className={cn(
-              navLinkClass(ADMIN_NAV.href),
-              pathname.startsWith(ADMIN_NAV.href) &&
-                "bg-violet-500/15 text-violet-300 shadow-none"
-            )}
-            title={ADMIN_NAV.description}
-          >
-            <ADMIN_NAV.icon className="size-4 shrink-0" aria-hidden />
-            <span className="font-medium">{ADMIN_NAV.title}</span>
-          </Link>
+          {isTrainer && (
+            <>
+              <Separator className="my-3 bg-cyan-500/10" />
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-violet-400/80">
+                Trainer
+              </p>
+              <Link
+                href={ADMIN_NAV.href}
+                className={cn(
+                  navLinkClass(ADMIN_NAV.href),
+                  pathname.startsWith(ADMIN_NAV.href) &&
+                    "bg-violet-500/15 text-violet-300 shadow-none"
+                )}
+                title={ADMIN_NAV.description}
+              >
+                <ADMIN_NAV.icon className="size-4 shrink-0" aria-hidden />
+                <span className="font-medium">{ADMIN_NAV.title}</span>
+              </Link>
+              <Link
+                href={TRAINER_SUBMISSIONS_NAV.href}
+                className={cn(
+                  navLinkClass(TRAINER_SUBMISSIONS_NAV.href),
+                  pathname.startsWith(TRAINER_SUBMISSIONS_NAV.href) &&
+                    "bg-violet-500/15 text-violet-300 shadow-none"
+                )}
+                title={TRAINER_SUBMISSIONS_NAV.description}
+              >
+                <TRAINER_SUBMISSIONS_NAV.icon className="size-4 shrink-0" aria-hidden />
+                <span className="flex flex-1 items-center justify-between font-medium">
+                  {TRAINER_SUBMISSIONS_NAV.title}
+                  {pendingSubmissions > 0 && (
+                    <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                      {pendingSubmissions}
+                    </span>
+                  )}
+                </span>
+              </Link>
+              <Link
+                href={TRAINER_CHALLENGES_NAV.href}
+                className={cn(
+                  navLinkClass(TRAINER_CHALLENGES_NAV.href),
+                  pathname.startsWith(TRAINER_CHALLENGES_NAV.href) &&
+                    "bg-violet-500/15 text-violet-300 shadow-none"
+                )}
+                title={TRAINER_CHALLENGES_NAV.description}
+              >
+                <TRAINER_CHALLENGES_NAV.icon className="size-4 shrink-0" aria-hidden />
+                <span className="font-medium">{TRAINER_CHALLENGES_NAV.title}</span>
+              </Link>
+            </>
+          )}
         </nav>
       </ScrollArea>
 
       <div className="mt-auto space-y-4 border-t border-cyan-500/15 p-4">
+        {xpData && (
+          <div className="space-y-2">
+            <XPBar
+              totalXp={xpData.total_xp}
+              level={xpData.level}
+              currentLevelMin={xpData.current_level_min}
+              nextLevelMin={xpData.next_level_min}
+              compact
+            />
+            <div className="flex justify-center">
+              <StreakBadge streak={streak} size="sm" />
+            </div>
+          </div>
+        )}
+        {progressSummary && (
+          <ProgressSummary
+            missions={progressSummary.missions}
+            completedCount={progressSummary.completedCount}
+            totalScore={progressSummary.totalScore}
+            tokens={progressSummary.tokens}
+          />
+        )}
         <TokenBadgeClient tokens={tokens} />
         <div className="flex items-center gap-3">
           <UserButton

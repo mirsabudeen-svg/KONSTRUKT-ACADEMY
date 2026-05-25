@@ -5,17 +5,26 @@ import {
   getUserRoleById,
   isTrainerOrAdminRole,
 } from "@/lib/auth/trainer";
+import { isAdminRole } from "@/lib/auth/admin";
 
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/missions(.*)",
   "/ai-terminal(.*)",
   "/admin(.*)",
+  "/leaderboard(.*)",
+  "/challenges(.*)",
+  "/settings(.*)",
 ]);
 
 const isTrainerRoute = createRouteMatcher([
   "/trainer(.*)",
   "/api/trainer(.*)",
+]);
+
+const isAdminRoute = createRouteMatcher([
+  "/admin(.*)",
+  "/api/admin(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
@@ -40,6 +49,30 @@ export default clerkMiddleware(async (auth, req) => {
       if (req.nextUrl.pathname.startsWith("/api/trainer")) {
         return NextResponse.json(
           { error: "Forbidden — trainer or admin role required" },
+          { status: 403 }
+        );
+      }
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+  }
+
+  if (isAdminRoute(req)) {
+    await auth.protect();
+    const { userId } = await auth();
+
+    if (!userId) {
+      if (req.nextUrl.pathname.startsWith("/api/admin")) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      return NextResponse.redirect(new URL("/sign-in", req.url));
+    }
+
+    const role = await getUserRoleById(userId);
+
+    if (!isAdminRole(role)) {
+      if (req.nextUrl.pathname.startsWith("/api/admin")) {
+        return NextResponse.json(
+          { error: "Forbidden — admin role required" },
           { status: 403 }
         );
       }

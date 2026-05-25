@@ -1,26 +1,83 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { auth } from "@clerk/nextjs/server";
 import {
   ArrowLeft,
+  ArrowRight,
   Award,
   CheckCircle2,
   Circle,
+  Clock,
+  FileBox,
   Lock,
   Rocket,
+  Sparkles,
+  Unlock,
 } from "lucide-react";
 
-import { MissionSubmitForm } from "@/components/missions/mission-submit-form";
+import { MissionDetailClient } from "@/components/missions/mission-detail-client";
+import { MissionCelebrationGateLazy } from "@/components/progress/completion-celebration-lazy";
+import TutorChatWidget from "@/components/tutor/tutor-chat-widget";
 import { buttonVariants } from "@/components/ui/button";
 import { getMissionChecklist } from "@/lib/missions/briefs";
+import { getLatestModuleSubmission } from "@/lib/missions/queries";
+import {
+  parseSubmissionContent,
+  submissionTypeLabel,
+} from "@/lib/missions/submission-display";
 import { getMissionById } from "@/lib/progress/missions";
+import { getMissionHardwareType } from "@/lib/hardware/mission-types";
 import { cn } from "@/lib/utils";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ completed?: string }>;
 };
 
-export default async function MissionDetailPage({ params }: PageProps) {
+function SubmissionPreview({
+  submissionType,
+  contentUrl,
+}: {
+  submissionType: import("@/lib/db/types").SubmissionType;
+  contentUrl: string | null;
+}) {
+  const preview = parseSubmissionContent(submissionType, contentUrl);
+
+  return (
+    <div className="mt-4 rounded-lg border border-white/5 bg-black/30 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Your submission · {submissionTypeLabel(submissionType)}
+      </p>
+      {preview.kind === "stl" ? (
+        <div className="mt-2 flex items-center gap-2 text-sm">
+          <FileBox className="size-4 text-violet-400" aria-hidden />
+          <span>STL File</span>
+          {preview.fileUrl && (
+            <a
+              href={preview.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-cyan-400 hover:underline"
+            >
+              Download
+            </a>
+          )}
+        </div>
+      ) : (
+        <pre className="mt-2 max-h-48 overflow-auto font-mono text-xs leading-relaxed text-cyan-100/90">
+          {preview.content}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+export default async function MissionDetailPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { id: idParam } = await params;
+  const { completed: completedParam } = await searchParams;
   const id = Number(idParam);
 
   if (!Number.isInteger(id) || id < 1 || id > 10) {
@@ -30,14 +87,39 @@ export default async function MissionDetailPage({ params }: PageProps) {
   const mission = await getMissionById(id);
   if (!mission) notFound();
 
+  const { userId } = await auth();
+  const latestSubmission = await getLatestModuleSubmission(id);
+
   const checklist = getMissionChecklist(id);
-  const isPendingReview = mission.displayStatus === "pending_review";
-  const isCompleted = mission.displayStatus === "completed";
+  const status = mission.displayStatus;
+  const isPendingReview = status === "pending_review";
+  const isCompleted = status === "completed";
+  const isReady = status === "ready";
+  const isRejected =
+    latestSubmission?.status === "rejected" && status === "in_progress";
+  const submissionFeedback =
+    latestSubmission?.feedback ?? latestSubmission?.trainer_feedback ?? null;
   const canSubmit =
-    mission.unlocked && !isPendingReview && !isCompleted;
+    mission.unlocked &&
+    !isPendingReview &&
+    !isCompleted &&
+    (status === "in_progress" || status === "available" || status === "ready");
+
+  const showCelebration = completedParam === "true";
+  const hardwareType = getMissionHardwareType(id, mission.mission_layer);
+  const showHardwareTools = hardwareType !== "general";
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 pb-12">
+      {showCelebration && (
+        <MissionCelebrationGateLazy
+          moduleId={id}
+          badgeName={mission.badge_name}
+          moduleTitle={mission.title}
+          score={mission.progress?.score ?? latestSubmission?.score}
+          completed
+        />
+      )}
       <Link
         href="/missions"
         className={cn(
@@ -72,9 +154,6 @@ export default async function MissionDetailPage({ params }: PageProps) {
             </span>
           </span>
         </div>
-        <p className="mt-4 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-          Status: {mission.displayStatus.replace(/_/g, " ")}
-        </p>
       </section>
 
       {!mission.unlocked ? (
@@ -89,6 +168,18 @@ export default async function MissionDetailPage({ params }: PageProps) {
         </div>
       ) : (
         <>
+          {isReady && (
+            <div className="animate-pulse rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-6 py-8 text-center">
+              <Unlock className="mx-auto size-10 text-cyan-400" aria-hidden />
+              <p className="font-display mt-4 text-xl font-bold text-cyan-200">
+                🔓 Mission Unlocked!
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                This mission is ready. Review the brief below and start building.
+              </p>
+            </div>
+          )}
+
           {/* Mission Brief */}
           <section className="rounded-xl border border-cyan-500/15 bg-card/40 p-6 backdrop-blur-sm">
             <div className="flex items-center gap-2">
@@ -117,53 +208,159 @@ export default async function MissionDetailPage({ params }: PageProps) {
                 </li>
               ))}
             </ul>
+
+            {isReady && (
+              <div className="mt-6">
+                <Link
+                  href={`#submit`}
+                  className={cn(
+                    buttonVariants(),
+                    "gap-2 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+                  )}
+                >
+                  <Sparkles className="size-4" aria-hidden />
+                  Start Mission
+                </Link>
+              </div>
+            )}
           </section>
 
-          {/* Submit */}
-          <section className="rounded-xl border border-violet-500/20 bg-card/40 p-6 backdrop-blur-sm">
+          {/* Submit / Review status */}
+          <section
+            id="submit"
+            className="rounded-xl border border-violet-500/20 bg-card/40 p-6 backdrop-blur-sm"
+          >
             <h2 className="font-display text-xl font-semibold text-violet-200">
               Submit Your Work
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Paste your code or upload an STL/image. Your trainer will review
-              and approve before the next mission unlocks.
-            </p>
 
-            <div className="mt-6">
-              {isPendingReview ? (
-                <div className="flex flex-col items-center rounded-xl border border-amber-500/30 bg-amber-500/10 px-6 py-10 text-center">
-                  <CheckCircle2
-                    className="size-10 text-amber-400"
-                    aria-hidden
-                  />
+            {isPendingReview ? (
+              <div className="mt-6 space-y-4">
+                <div className="flex flex-col items-center rounded-xl border border-amber-500/30 bg-amber-500/10 px-6 py-8 text-center">
+                  <Clock className="size-10 text-amber-400" aria-hidden />
                   <p className="font-display mt-4 text-lg font-semibold text-amber-200">
-                    Submitted! Waiting for Trainer Review ✅
+                    ⏳ Awaiting Trainer Review
                   </p>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Hang tight — your trainer is reviewing this mission.
+                    Your submission is being reviewed. You cannot resubmit until
+                    your trainer responds.
                   </p>
                 </div>
-              ) : isCompleted ? (
-                <div className="flex flex-col items-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-6 py-10 text-center">
+                {latestSubmission && (
+                  <SubmissionPreview
+                    submissionType={latestSubmission.submission_type}
+                    contentUrl={latestSubmission.content_url}
+                  />
+                )}
+              </div>
+            ) : isCompleted ? (
+              <div className="mt-6 space-y-4">
+                <div className="flex flex-col items-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-6 py-8 text-center">
                   <CheckCircle2
                     className="size-10 text-emerald-400"
                     aria-hidden
                   />
-                  <p className="font-display mt-4 text-lg font-semibold text-emerald-300">
-                    Mission complete
+                  <p className="font-display mt-4 text-xl font-bold text-emerald-300">
+                    ✅ Mission Complete!
                   </p>
-                  {mission.progress?.score != null && (
-                    <p className="mt-2 font-mono text-sm text-muted-foreground">
-                      Score: {mission.progress.score}%
+                  {(mission.progress?.score ?? latestSubmission?.score) !=
+                    null && (
+                    <p className="mt-2 font-mono text-lg text-emerald-200">
+                      Score:{" "}
+                      {mission.progress?.score ?? latestSubmission?.score}/100
                     </p>
                   )}
+                  <p className="mt-2 text-sm text-violet-200">
+                    Badge earned:{" "}
+                    <span className="font-semibold">{mission.badge_name}</span>
+                  </p>
+                  {submissionFeedback && (
+                    <p className="mt-4 max-w-md rounded-lg border border-emerald-500/20 bg-black/20 px-4 py-3 text-sm text-muted-foreground">
+                      Trainer feedback: {submissionFeedback}
+                    </p>
+                  )}
+                  {id < 10 && (
+                    <Link
+                      href={`/missions/${id + 1}`}
+                      className={cn(
+                        buttonVariants(),
+                        "mt-6 gap-2 bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+                      )}
+                    >
+                      Next mission
+                      <ArrowRight className="size-4" aria-hidden />
+                    </Link>
+                  )}
                 </div>
-              ) : (
-                <MissionSubmitForm moduleId={id} disabled={!canSubmit} />
-              )}
-            </div>
+                {latestSubmission && (
+                  <SubmissionPreview
+                    submissionType={latestSubmission.submission_type}
+                    contentUrl={latestSubmission.content_url}
+                  />
+                )}
+              </div>
+            ) : isRejected ? (
+              <div className="mt-6 space-y-4">
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-6">
+                  <p className="font-display text-lg font-semibold text-red-300">
+                    📝 Revision Required
+                  </p>
+                  {submissionFeedback && (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      Trainer feedback:{" "}
+                      <span className="text-red-200">{submissionFeedback}</span>
+                    </p>
+                  )}
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Update your work and submit again for review.
+                  </p>
+                </div>
+
+                {latestSubmission && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Previous submission (reference)
+                    </p>
+                    <SubmissionPreview
+                      submissionType={latestSubmission.submission_type}
+                      contentUrl={latestSubmission.content_url}
+                    />
+                  </div>
+                )}
+
+                <MissionDetailClient
+                  moduleId={id}
+                  missionLayer={mission.mission_layer}
+                  canSubmit={canSubmit}
+                  showHardwareTools={showHardwareTools}
+                />
+              </div>
+            ) : (
+              <>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Paste your code or upload an STL/image. Your trainer will review
+                  and approve before the next mission unlocks.
+                </p>
+                <div className="mt-6">
+                  <MissionDetailClient
+                    moduleId={id}
+                    missionLayer={mission.mission_layer}
+                    canSubmit={canSubmit}
+                    showHardwareTools={showHardwareTools}
+                  />
+                </div>
+              </>
+            )}
           </section>
         </>
+      )}
+
+      {mission.unlocked && userId && (
+        <TutorChatWidget
+          moduleId={id}
+          studentId={userId}
+          moduleTitle={mission.title}
+        />
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import {
@@ -29,7 +29,10 @@ export function AiTerminal({
   const [tokens, setTokens] = useState(initialTokens);
   const [input, setInput] = useState("");
   const tokensRef = useRef(tokens);
-  tokensRef.current = tokens;
+
+  useEffect(() => {
+    tokensRef.current = tokens;
+  }, [tokens]);
 
   const onTokensUpdate = useCallback((remaining: number) => {
     setTokens(remaining);

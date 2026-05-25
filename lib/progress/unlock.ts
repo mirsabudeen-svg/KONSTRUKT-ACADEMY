@@ -95,6 +95,31 @@ export function getFallbackMissions(): MissionModule[] {
     "Graduation Flight",
   ];
 
+  const layers: import("@/lib/db/types").MissionLayer[] = [
+    "THINK",
+    "THINK",
+    "DESIGN",
+    "DESIGN",
+    "DESIGN",
+    "BUILD",
+    "BUILD",
+    "BUILD",
+    "OPERATE",
+    "OPERATE",
+  ];
+  const badges = [
+    "Initiated Builder",
+    "Prompt Engineer",
+    "First Builder",
+    "Mechanics Explorer",
+    "Robot Designer",
+    "Fabrication Operator",
+    "Assembler Level 1",
+    "Assembler Level 2",
+    "Robot Commander",
+    "Certified Kontraktor",
+  ];
+
   return titles.map((title, i) => {
     const id = i + 1;
     const unlocked = id === 1;
@@ -105,7 +130,8 @@ export function getFallbackMissions(): MissionModule[] {
       id,
       title,
       description: null,
-      badge_name: `Badge ${id}`,
+      mission_layer: layers[i],
+      badge_name: badges[i],
       sort_order: id,
       progress: null,
       unlocked,

@@ -7,6 +7,12 @@ import { getMissionById } from "@/lib/progress/missions";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { ensureStudentProfile } from "@/lib/user";
+import { reviewCode } from "@/lib/ai/code-reviewer";
+import {
+  analyzeStudentProgress,
+  generateLearningAlert,
+} from "@/lib/ai/adaptive-learning";
+import { checkPlagiarism } from "@/lib/safety/plagiarism-detector";
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const STORAGE_BUCKET = "mission-submissions";
@@ -18,7 +24,15 @@ export type SubmitMissionInput = {
 };
 
 export type SubmitMissionResult =
-  | { ok: true; submissionId: string }
+  | {
+      ok: true;
+      submissionId: string;
+      codeReview?: {
+        aiScore: number;
+        hardwareViolations: number;
+        warnings: string[];
+      };
+    }
   | { ok: false; error: string; status: number };
 
 function buildContentPayload(
@@ -170,5 +184,54 @@ export async function submitMissionWork(
     };
   }
 
-  return { ok: true, submissionId: submission.id };
+  let codeReviewResult:
+    | { aiScore: number; hardwareViolations: number; warnings: string[] }
+    | undefined;
+
+  const codeToReview =
+    submissionType === "code" ? workDescription || contentUrl : workDescription;
+
+  if (codeToReview.trim() && process.env.OPENAI_API_KEY) {
+    try {
+      const { review } = await reviewCode(
+        submission.id,
+        codeToReview,
+        input.moduleId,
+        userId
+      );
+      codeReviewResult = {
+        aiScore: review.score,
+        hardwareViolations: review.hardware_violations.length,
+        warnings: review.hardware_violations.map(
+          (v) => v.description
+        ),
+      };
+    } catch (err) {
+      console.error("[submitMissionWork] code review", err);
+    }
+
+    if (codeToReview.trim()) {
+      try {
+        await checkPlagiarism(
+          submission.id,
+          codeToReview,
+          input.moduleId,
+          userId
+        );
+      } catch (err) {
+        console.error("[submitMissionWork] plagiarism check", err);
+      }
+    }
+  }
+
+  try {
+    const assessment = await analyzeStudentProgress(userId);
+    if (assessment.risk_level !== "on_track") {
+      await generateLearningAlert(userId, assessment);
+    }
+  } catch (err) {
+    console.error("[submitMissionWork] adaptive analysis", err);
+  }
+
+  return { ok: true, submissionId: submission.id, codeReview: codeReviewResult };
 }

@@ -1,112 +1,174 @@
 import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
-import { Rocket, Terminal, Sparkles } from "lucide-react";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { Coins, Target, Trophy, Zap } from "lucide-react";
 
-import { MissionTrack } from "@/components/mission-track";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { TokenBadge } from "@/components/token-badge";
+import { DailyBriefingCard } from "@/components/communications/daily-briefing-card";
+import { XPBar } from "@/components/gamification/xp-bar";
+import { StreakBadge } from "@/components/gamification/streak-badge";
+import { MissionTrack } from "@/components/progress/mission-track";
+import { RecentActivity } from "@/components/progress/recent-activity";
+import { isAdminRole } from "@/lib/auth/admin";
+import { getUserRoleById } from "@/lib/auth/trainer";
+import { getActiveChallengeCount } from "@/lib/gamification/challenges";
+import { getStreak } from "@/lib/gamification/streak-engine";
+import { getStudentXP } from "@/lib/gamification/xp-engine";
+import { getRecentActivity } from "@/lib/progress/activity";
 import { getMissionTrack } from "@/lib/progress/missions";
+import {
+  getCompletedCount,
+  getRank,
+  getTotalScore,
+  MAX_TOTAL_SCORE,
+  MODULE_COUNT,
+} from "@/lib/progress/stats";
+import { getTokensRemaining } from "@/lib/tokens";
 
 export default async function DashboardPage() {
   const user = await currentUser();
+  const { userId } = await auth();
+
+  if (userId) {
+    const role = await getUserRoleById(userId);
+    if (isAdminRole(role)) {
+      redirect("/admin");
+    }
+  }
+
   const firstName = user?.firstName ?? "Cadet";
   const track = await getMissionTrack();
-  const { summary } = track;
+  const { missions } = track;
+  const completed = getCompletedCount(missions);
+  const totalScore = getTotalScore(missions);
+  const rank = getRank(completed);
+  const tokens = await getTokensRemaining();
+  const activity = await getRecentActivity();
+  const xpData = userId ? await getStudentXP(userId) : null;
+  const streakData = userId ? await getStreak(userId) : null;
+  const activeChallenges = userId ? await getActiveChallengeCount(userId) : 0;
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-sm uppercase tracking-widest text-cyan-500/80">
-            Command Center
-          </p>
-          <h1 className="font-display mt-1 text-3xl font-bold text-foreground">
-            Welcome back, {firstName}
-          </h1>
-          <p className="mt-2 max-w-xl text-muted-foreground">
-            {summary.completed === 0
-              ? "Your first mission is ready. Complete missions in order to unlock the next bay."
-              : `${summary.completed} of ${summary.total} missions complete — keep climbing the track.`}
-          </p>
+      <DailyBriefingCard />
+
+      {xpData && (
+        <div className="rounded-xl border border-cyan-500/20 bg-zinc-950/60 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1 space-y-3">
+              <XPBar
+                totalXp={xpData.total_xp}
+                level={xpData.level}
+                currentLevelMin={xpData.current_level_min}
+                nextLevelMin={xpData.next_level_min}
+                animate
+              />
+            </div>
+            <StreakBadge streak={streakData?.current_streak ?? 0} />
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <StatPill
+              label="Weekly XP"
+              value={`${xpData.xp_this_week} XP`}
+              icon={Zap}
+            />
+            <StatPill
+              label="Active Challenges"
+              value={String(activeChallenges)}
+              icon={Target}
+              href="/challenges"
+            />
+          </div>
         </div>
-        <TokenBadge />
+      )}
+
+      <div>
+        <p className="text-sm uppercase tracking-widest text-cyan-500/80">
+          Command Center
+        </p>
+        <h1 className="font-display mt-1 text-3xl font-bold text-foreground">
+          Welcome back, {firstName}
+        </h1>
+        <p className="mt-2 max-w-xl text-muted-foreground">
+          {completed === 0
+            ? "Your first mission is ready. Complete missions in order to unlock the next bay."
+            : `${completed} of ${MODULE_COUNT} missions complete — keep climbing the track.`}
+        </p>
       </div>
 
-      <section>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold text-cyan-300">
-            Mission progress
-          </h2>
+      <div className="grid gap-3 rounded-xl border border-cyan-500/15 bg-zinc-950/50 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatPill
+          label="Missions"
+          value={`${completed}/${MODULE_COUNT}`}
+          icon={Trophy}
+        />
+        <StatPill
+          label="Score"
+          value={`${totalScore}/${MAX_TOTAL_SCORE}`}
+        />
+        <StatPill label="Rank" value={rank} highlight />
+        <StatPill label="Tokens" value={String(tokens)} icon={Coins} />
+      </div>
+
+      <MissionTrack missions={missions} />
+
+      <RecentActivity items={activity} />
+
+      {completed >= MODULE_COUNT && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 text-center">
+          <p className="font-display text-lg font-semibold text-emerald-300">
+            All missions complete!
+          </p>
           <Link
-            href="/missions"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+            href="/certificate"
+            className="mt-3 inline-block text-sm text-cyan-400 hover:underline"
           >
-            View full track
+            View your graduation certificate →
           </Link>
         </div>
-        <MissionTrack compact showHeader showActiveBanner data={track} />
-      </section>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <QuickCard
-          href="/missions"
-          icon={Rocket}
-          title="All Missions"
-          description="Open the full 10-step curriculum track."
-          accent="cyan"
-        />
-        <QuickCard
-          href="/ai-terminal"
-          icon={Terminal}
-          title="AI Terminal"
-          description="Generate arm code & 3D models. Each run costs 1 AI token."
-          accent="violet"
-        />
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6">
-          <div className="flex items-center gap-2 text-amber-300">
-            <Sparkles className="size-5" aria-hidden />
-            <h3 className="font-display font-semibold">Token Economy</h3>
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Out of tokens? Ask your Trainer for a refill at the academy station.
-          </p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
-function QuickCard({
-  href,
+function StatPill({
+  label,
+  value,
   icon: Icon,
-  title,
-  description,
-  accent,
+  highlight,
+  href,
 }: {
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  accent: "cyan" | "violet";
+  label: string;
+  value: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  highlight?: boolean;
+  href?: string;
 }) {
-  const border =
-    accent === "cyan" ? "border-cyan-500/20" : "border-violet-500/20";
-  const iconColor = accent === "cyan" ? "text-cyan-400" : "text-violet-400";
-
-  return (
-    <div
-      className={`flex flex-col rounded-xl border ${border} bg-card/40 p-6 backdrop-blur-sm`}
-    >
-      <Icon className={`size-8 ${iconColor}`} aria-hidden />
-      <h3 className="font-display mt-4 font-semibold">{title}</h3>
-      <p className="mt-2 flex-1 text-sm text-muted-foreground">{description}</p>
-      <Link
-        href={href}
-        className={cn(buttonVariants({ variant: "outline" }), "mt-4 w-fit")}
-      >
-        Open
-      </Link>
+  const content = (
+    <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-black/20 px-4 py-3">
+      {Icon && <Icon className="size-4 text-cyan-400" aria-hidden />}
+      <div>
+        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+          {label}
+        </p>
+        <p
+          className={`font-display text-sm font-semibold ${
+            highlight ? "text-violet-300" : "text-foreground"
+          }`}
+        >
+          {value}
+        </p>
+      </div>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="transition-opacity hover:opacity-80">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
