@@ -19,18 +19,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  async rewrites() {
-    return [
-      {
-        source: "/__clerk/npm/:path*",
-        destination: "https://npm.clerk.services/:path*",
-      },
-      {
-        source: "/__clerk/:path*",
-        destination: "https://clerk.xsedes.com/__clerk/:path*",
-      },
-    ];
-  },
 };
 
 export default nextConfig;
