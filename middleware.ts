@@ -6,6 +6,7 @@ import {
   isTrainerOrAdminRole,
 } from "@/lib/auth/trainer";
 import { isAdminRole } from "@/lib/auth/admin";
+import { getClerkDomain } from "@/lib/clerk-config";
 
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
@@ -27,7 +28,8 @@ const isAdminRoute = createRouteMatcher([
   "/api/admin(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
+export default clerkMiddleware(
+  async (auth, req) => {
   if (isProtectedRoute(req)) {
     await auth.protect();
   }
@@ -79,12 +81,20 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
   }
-});
+  },
+  {
+    domain: getClerkDomain(),
+    // Custom FAPI CNAME at clerk.xsedes.com — bypass Vercel auto-proxy (/__clerk),
+    // which requires a proxy URL registered in the Clerk Dashboard.
+    frontendApiProxy: {
+      enabled: false,
+    },
+  }
+);
 
 export const config = {
   matcher: [
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     "/(api|trpc)(.*)",
-    "/__clerk/(.*)",
   ],
 };
