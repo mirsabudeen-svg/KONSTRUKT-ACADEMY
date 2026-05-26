@@ -1,17 +1,31 @@
 import { z } from "zod";
 
-const envSchema = z.object({
-  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
-  CLERK_SECRET_KEY: z.string().min(1),
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  OPENAI_API_KEY: z.string().min(1),
-  NEXT_PUBLIC_MESHY_API_KEY: z.string().optional(),
-  MESHY_API_KEY: z.string().optional(),
-  NEXT_PUBLIC_APP_URL: z.string().url().optional(),
-  ANTHROPIC_API_KEY: z.string().optional(),
-});
+const envSchema = z
+  .object({
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
+    CLERK_SECRET_KEY: z.string().min(1),
+    NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1).optional(),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+    OPENAI_API_KEY: z.string().min(1),
+    NEXT_PUBLIC_MESHY_API_KEY: z.string().optional(),
+    MESHY_API_KEY: z.string().optional(),
+    NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+    ANTHROPIC_API_KEY: z.string().optional(),
+  })
+  .refine(
+    (data) =>
+      Boolean(
+        data.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+          data.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+      ),
+    {
+      message:
+        "Set NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      path: ["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"],
+    }
+  );
 
 export type Env = z.infer<typeof envSchema>;
 

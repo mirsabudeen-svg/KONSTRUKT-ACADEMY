@@ -38,8 +38,10 @@ export async function getRecentActivity(limit = 5): Promise<ActivityItem[]> {
       ),
   ]);
 
-  const moduleMap = new Map(
-    (modulesResult.data ?? []).map((m) => [m.id, m])
+  type ModuleRow = { id: string; title: string; badge_name: string | null };
+
+  const moduleMap = new Map<string, ModuleRow>(
+    (modulesResult.data ?? []).map((m: ModuleRow) => [m.id, m])
   );
 
   if (progressResult.data) {
@@ -67,9 +69,11 @@ export async function getRecentActivity(limit = 5): Promise<ActivityItem[]> {
     }
   }
 
+  type TutorRow = { id: string; updated_at: string };
+
   const tutorCount = tutorResult.data?.length ?? 0;
   if (tutorCount > 0) {
-    const latest = tutorResult.data!.reduce((a, b) =>
+    const latest = (tutorResult.data as TutorRow[]).reduce((a, b) =>
       a.updated_at > b.updated_at ? a : b
     );
     items.push({

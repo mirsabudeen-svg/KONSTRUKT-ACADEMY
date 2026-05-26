@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth/trainer";
 import { isAdminRole } from "@/lib/auth/admin";
 import { getClerkDomain } from "@/lib/clerk-config";
+import { updateSession } from "@/lib/supabase/middleware";
 
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
@@ -30,6 +31,8 @@ const isAdminRoute = createRouteMatcher([
 
 export default clerkMiddleware(
   async (auth, req) => {
+  const supabaseResponse = await updateSession(req);
+
   if (isProtectedRoute(req)) {
     await auth.protect();
   }
@@ -81,6 +84,8 @@ export default clerkMiddleware(
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
   }
+
+  return supabaseResponse;
   },
   {
     domain: getClerkDomain(),
